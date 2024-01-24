@@ -617,16 +617,16 @@ FROM EMP e;
 
 
 -- 칼럼 데이터 출력방식 고정
+
 SELECT
 	EMPNO,
 	ENAME,
 	HIREDATE,
 	NEXT_DAY(ADD_MONTHS(HIREDATE,3),'월요일') AS R_JOB
-	NVL(TO_CHAR(COMM),'N/A') AS COMM 
+	NVL(TO_CHAR(COMM),'N/A') AS COMM
 FROM
-	EMP e ;
-
-
+	EMP e;
+	
 
 
  
