@@ -1,1 +1,3 @@
 ALTER SESSION SET "_oracle_script"=TRUE;
+
+GRANT CREATE VIEW TO scott;

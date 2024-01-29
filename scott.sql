@@ -901,7 +901,7 @@ SELECT
 	s.HISAL
 FROM
 	DEPT d
-LEFT JOIN EMP e ON
+LEFT OUTER JOIN EMP e ON
 	d.DEPTNO = e.DEPTNO,
 	SALGRADE s
 WHERE
@@ -922,7 +922,7 @@ SELECT
 	s.HISAL
 FROM
 	DEPT d
-LEFT JOIN EMP e ON
+LEFT OUTER JOIN EMP e ON
 	d.DEPTNO = e.DEPTNO 
 	LEFT OUTER JOIN SALGRADE s ON
 	e.SAL BETWEEN s.LOSAL AND s.HISAL
@@ -930,27 +930,548 @@ ORDER BY
 	d.DEPTNO,
 	e.ENAME;
 
+-- 서브쿼리 
+-- SQL 문 안에 내부에서 SELECT 문을 사용
+-- 괄호로 묶어서 사용
+-- 메인쿼리와 비교대상과 같은 
+
+-- jones 사원의 급여보다 높은 급여를 받는 사원 조회
+-- jones 급여 알아내기 => 비교
+
+SELECT SAL  
+FROM EMP e 
+WHERE ENAME = 'JONES';
+
+
+SELECT *
+FROM EMP e 
+WHERE SAL > '2975';
+
+SELECT
+	*
+FROM
+	EMP e
+WHERE
+	SAL > (
+	SELECT
+		SAL
+	FROM
+		EMP e
+	WHERE
+		ENAME = 'JONES');
+
+-- allen 이 받는 comm 보다 많은 추가수당을 받는 사원 조회
+	
+SELECT COMM
+FROM EMP e 
+WHERE ENAME = 'ALLEN';
+
+SELECT
+	*
+FROM
+	EMP e
+WHERE
+	COMM > (
+	SELECT
+		COMM
+	FROM
+		EMP e
+	WHERE
+		ENAME = 'ALLEN');
+
+-- ward 사원보다 입사일이 빠른 입사자 조회
+
+SELECT HIREDATE 
+FROM EMP e 
+WHERE ENAME = 'WARD';
+
+SELECT
+	*
+FROM
+	EMP e
+WHERE
+	HIREDATE < (
+	SELECT
+		HIREDATE
+	FROM
+		EMP e
+	WHERE
+		ENAME = 'WARD');
+
+-- 20번 부서에 속한 사원 중 전체 사원의 평균 급여보다 높은 급여를 받는 사원 조회
+-- 사원번호, 사원명, 직무, 급여, 부서번호, 부서명, 지역
+
+SELECT AVG(sal) 
+FROM EMP e 
+WHERE DEPTNO = 20;
+
+SELECT e.EMPNO, e.ENAME, e.JOB, e.SAL, d.DEPTNO, d.DNAME, d.LOC, 
+FROM EMP e JOIN DEPT d ON e.DEPTNO = d.DEPTNO 
+WHERE e.DEPTNO = 20 AND e.SAL > (SELECT AVG(SAL) 
+FROM EMP);
+
+
+
+-- 단일행 사브쿼리 : 서브쿼리 실행결과가 단 하나의 행의로 나오는 서브쿼리
+--   사용가능한 연산자 : >, <, >=, <=, <>, ^=, !=
+
+-- 다중행 서브쿼리 : 서브쿼리 실행 결과가 여려개의 행으로 나오는 서브쿼리
+--   사용가능한 연산자 : in, any(some), all, exists
+--                       in, any(some) : 메인쿼리의 조건식을 만족하는 서브쿼리가 하나 이상
+--                       all(메인쿼리의 조건식을 서브쿼리의 결과 모두가 만족)
+--                       exists(서브쿼리의 결과가 존재하면)
+
+-- 단일 행 하위 질의에 2개 이상의 행이 리턴되었습니다.
+-- 서브쿼리가 여러 개의 결과값을 리턴 하는 데 단일행 서브쿼리에 사용하는 연산자가 사용된 경우 
+-- SELECT * FROM EMP e WHERE SAL >= (SELECT MAX(SAL) FROM EMP GROUP BY DEPTNO);
+
+SELECT * FROM EMP e WHERE SAL IN (SELECT MAX(SAL) FROM EMP GROUP BY DEPTNO);
+
+-- in 사용과 동일한 결과
+SELECT * FROM EMP e WHERE SAL = ANY (SELECT MAX(SAL) FROM EMP GROUP BY DEPTNO);
+
+
+-- 30번 부서 사원들의 최대 급여보다 적은 급여를 받는 사원 조회
+SELECT
+	*
+FROM
+	EMP 
+WHERE
+	SAL < ALL (
+	SELECT
+		SAL
+	FROM
+		EMP
+	WHERE DEPTNO = 30);
+
+-- 전혀 상관없는 데이블도 연결 가능
+SELECT
+	*
+FROM
+	EMP 
+WHERE
+	EXISTS (
+	SELECT
+		DNAME
+	FROM
+		DEPT d 
+	WHERE DEPTNO = 30);
+
+
+SELECT JOB 
+FROM EMP e 
+WHERE ename = 'ALLEN';
+
+SELECT e.JOB, e.EMPNO, e.ENAME, e.SAL, d.DEPTNO, d.DNAME 
+FROM EMP e JOIN DEPT d ON e.DEPTNO = d.DEPTNO 
+WHERE e.JOB IN (SELECT JOB 
+FROM EMP e 
+WHERE ENAME = 'ALLEN')
+
+
+SELECT
+	e.EMPNO,
+	e.ENAME,
+	d.DNAME,
+	e.HIREDATE,
+	d.LOC,
+	e.SAL,
+	s.GRADE
+FROM
+	EMP e
+JOIN DEPT d ON
+	e.DEPTNO = d.DEPTNO
+JOIN SALGRADE s ON
+	e.SAL BETWEEN s.LOSAL AND s.HISAL
+WHERE
+	e.SAL > (
+	SELECT
+		AVG(e.SAL)
+	FROM
+		EMP e)
+ORDER BY
+	e.SAL DESC,
+	e.EMPNO ASC;
+
+-- 다중열 서브쿼리
+-- 부서별 급여 최댓값
+SELECT
+	*
+FROM
+	EMP e
+WHERE
+	(DEPTNO,
+	SAL)
+	IN (
+	SELECT
+		DEPTNO,
+		MAX(SAL)
+	FROM
+		EMP e
+	GROUP BY
+		DEPTNO);
+
+-- from절에 사용하는 서브쿼리(인라인 뷰)
+
+SELECT E10.EMPNO, E10.ENAME, E10.DEPTNO, D.DNAME, D.LOC
+FROM (SELECT * FROM EMP WHERE DEPTNO=10) E10,
+     (SELECT * FROM DEPT) D
+WHERE E10.DEPTNO = D.DEPTNO
+
+
+-- select 절에 사용하는 서브쿼리(스킬라 서브쿼리)
+SELECT
+	EMPNO,
+	ENAME,
+	JOB,
+	SAL,
+	(
+	SELECT
+		GRADE
+	FROM
+		SALGRADE s
+	WHERE
+		E.SAL BETWEEN S.LOSAL AND S.HISAL) AS SALGRADE
+FROM
+	EMP e;
+
+
+-- DML(date manipulation language-데이터 조작 언어)
+-- SELECT(조회), INSERT(삽입), UPDATE(수정), DELETE(삭제)
+
+-- 기존테이블 복제해서 새로운 테이블을 생성
+CREATE TABLE DEPT_TEMP AS SELECT * FROM DEPT;
+
+-- 새로운 부서 추가
+-- INSERT INTO 테이블명(열이름1, 열아름2,........)
+-- VALUES(데이터, 데이터........)
+
+INSERT INTO DEPT_TEMP(DEPTNO,DNAME,LOC)
+VALUES(60,'DATEBASE','BUSAN');
+
+INSERT INTO DEPT_TEMP
+VALUES(70,'DATEBASE','BUSAN');
+
+--값의 수가 충분하지 않습니다
+INSERT INTO DEPT_TEMP
+VALUES(80,'DATEBASE');
+
+INSERT INTO DEPT_TEMP(DEPTNO,DNAME)
+VALUES(80,'DATEBASE');
+
+--이 열에 대해 지정된 전체 자릿수보다 큰 값이 허용됩니다.
+INSERT INTO DEPT_TEMP(DEPTNO,DNAME)
+VALUES(800,'DATEBASE');
+
+
+INSERT INTO DEPT_TEMP(DEPTNO,DNAME,LOC)
+VALUES(90,'DATEBASE', NULL);
+
+CREATE TABLE EMP_TEMP AS SELECT * FROM EMP;
+
+
+INSERT INTO EMP_TEMP(EMPNO, ENAME, JOB, MGR, HIREDATE, SAL, COMM, DEPTNO)
+VALUES(8000,'HONG','MANAGER',7902,'2015-03-15',1000,NULL,50);
+
+INSERT INTO EMP_TEMP(EMPNO, ENAME, JOB, MGR, HIREDATE, SAL, COMM, DEPTNO)
+VALUES(9000,'SUNG','MANAGER',7782,SYSDATE,1200,NULL,50);
+
+-- 테이블 구조만 복사(데이터는 복사하지 않을때)
+CREATE TABLE EMP_TEMP2 AS SELECT * FROM EMP WHERE 1<>1;
+
+-- 수정
+-- UPDATE 테이블명 SET 수정할 내용,.....,..... ;
+-- UPDATE 테이블명 SET 수정할 내용,.....,..... where 조건;
+
+
+UPDATE DEPT_TEMP 
+SET LOC = 'BUSAN';
+
+UPDATE DEPT_TEMP 
+SET LOC = 'SEOUL'
+WHERE DEPTNO =50;
+
+UPDATE DEPT_TEMP 
+SET LOC = 'SEOUL', DNAME = 'NETWORK'
+WHERE DEPTNO =40;
+
+
+-- 삭제
+-- DELET 테이블명 WHERE 조건
+-- DELET FROM 테이블명 WHERE 조건
+
+DELETE DEPT_TEMP
+WHERE DEPTNO=20;
+
+DELETE FROM DEPT_TEMP
+WHERE DEPTNO=30;
+
+
+-- 서브쿼리 + DELET
+-- 급여등급이 3등급이고 30번 부서의 사원 삭제
+
+
+DELETE
+FROM
+	EMP_TEMP
+WHERE
+	EMPNO IN (
+	SELECT
+		EMPNO
+	FROM
+		EMP_TEMP et
+	JOIN SALGRADE s ON
+		et.SAL BETWEEN s.LOSAL AND s.HISAL
+		AND s.GRADE = 3
+		AND et.DEPTNO = 30)
+
+(SELECT EMPNO  
+FROM EMP_TEMP et JOIN SALGRADE s ON et.SAL BETWEEN s.LOSAL AND s.HISAL AND s.GRADE = 3 AND et.DEPTNO=30)
+
+-- 서브쿼리 + UPDATE
+
+UPDATE DEPT_TEMP 
+SET (DNAME,LOC) = (SELECT DNAME, LOC FROM DEPT WHERE DEPTNO=40)
+WHERE DEPTNO = 40;
+
+-- 서브쿼리 + INSERT
+
+INSERT
+	INTO
+	EMP_TEMP(EMPNO,
+	ENAME,
+	JOB,
+	MGR,
+	HIREDATE,
+	SAL,
+	COMM,
+	DEPTNO)
+SELECT
+	e1.EMPNO,
+	e1.ENAME,
+	e1.JOB,
+	e1.MGR,
+	e1.HIREDATE,
+	e1.SAL,
+	e1.COMM,
+	e1.DEPTNO
+FROM
+	EMP e1
+JOIN SALGRADE s ON
+	e1.SAL BETWEEN s.LOSAL AND s.HISAL
+	AND s.GRADE = 1;
+
+
+CREATE TABLE EXAM_DEPT AS SELECT * FROM DEPT;
+
+
+INSERT INTO EXAM_EMP(EMPNO, ENAME, JOB, MGR, HIREDATE, SAL, COMM, DEPTNO)
+VALUES(7203,'TEST_USER3','ANALYST',7201,'2016-04-11',3400,NULL,60);
+COMMIT;
+
+
+/*서브퉈리
+[실습4] EXAM_EMP에 속한 사원 중 60번 부서의 사원 중에서 입사일이 가장 빠른 사원보다 늦게 입사한 사원의 급여를 10% 인상하고 80번 부서로 옮기는 sql문 작설하기*/
+
+UPDATE EXAM_EMP SET SAL = SAL * 1.1, DEPTNO = 80 WHERE HIREDATE > (SELECT MIN(HIREDATE) FROM EXAM_EMP WHERE DEPTNO=60);
+
+
+
+-- transaction 
+-- 하나의 작업 또는 밀접하게 연관되에있는 작업 수행을 위해 나눌수 없는 최소 작업 단위 
+-- 최종반영(commit) / 모두 취소(rollback)
+
+-- dbeaver 설정에서 커밋모드 변경 가능
+-- auto commit 상태임
+
+INSERT INTO DEPT_TEMP values(55,'NETWORK','SEOUL');
+UPDATE DEPT_TEMP SET LOC='BUSAN' WHERE DEPTNO = 55;
+
+COMMIT;
+ROLLBACK; -- COMMIT 하기전에 해야 함
+
+SELECT * FROM DEPT_TEMP dt;
+
+CREATE TAVLE 
+
+DELETE FROM DEPT_TEMP dt WHERE deptno=55;
+UPDATE DEPT_TEMP SET DNAME = 'WEB' WHERE DEPTNO = 10;
+
+
+-- SQL - 1. DDL(정의) 2. DML - select, insert, update, delete 
+
+-- 데이터 정의어 (DDL)
+-- 테이블 정의, 사용자 정의, 권한 부여(취소)
+
+-- 1. 테이블 작성
+-- CREATE TABLE 테이블명(    
+--   필드명 필드타입(크기) 제약조건,
+--)
+
+
+-- 열 이름 규칙
+-- 문지로 시작 / 30 byte 이하로 작성 / 한 테이블 안 열 이름 중복 불가
+-- 열 이릅은 문자, 0-9, 특수문자($,#,_) 사용가능
+-- sql 키워드는 열 이름으로 사용불가(order, group, select)
+
+-- 문자
+--  1) char, varchar, NCAHAR, NVARCHAR, CLOB, NCLOB, LONG
+--  char or varchar : 열의 너비가 고정값인지 가변인지
+-- char(10) : 'hong' => 10자리 다 채움
+-- varchar2(10) : 'hong' => 입력된 글자에 따라 가변
+
+-- varchar2, char 가 한글이고, 영문 입력시 사용하는 바이트 수가 다름
+-- nchar, nvarchar 사용하는 바이트 수 통일해서 사용
+-- nchar(10) : 'hong' => 유니코드 문자열 타입이고, 고정
+-- nvarchar2(10) : 'hong' => 뮤니코드 문자열이 타입이고, 가변
+
+-- CLOB : 문자열 데이터를 외부파일로 변환
+--        엄청 많은 텍스트 데이터 입력시 사용(4기가)
+
+-- LONG : 2기가
+
+
+
+-- 숫자 
+--  number (전체자리수, 수수점자리수)
+--  BINARY_FLOAT, BINARY_DOUBLE
+
+
+-- 날짜
+-- DATE< TIMESTAMP
 
 
 
 
 
+CREATE TABLE EMP_DDL(
+    EMPNO NUMBER(4),
+    ENAME VARCHAR(10),
+    JOB VARCHAR(9),
+    MGR NUMBER(4),
+    HIREDATE DATE,
+    SAL NUMBER(7,2),
+    COMM NUMBER(7,2),
+    DEPTNO NUMBER(2)
+);
 
 
+SELECT * FROM EMP_DDL ed;
+
+-- 기본테이블 열 구조와 데이터 복사해서 새 테이블 생성
+CREATE TABLE EXAM_EMP AS SELECT * FROM emp;
+
+-- 기본 테이블 열 구조만 복사해서 새 테이블 생성
+CREATE TABLE EXAM_EMP2 AS SELECT * FROM emp WHERE 1<>1;
+
+-- DDL : CREARE, ALTER
+-- 2. 테이블 변경
+-- 1) 열 추가 (ADD)
+--    ALTER TABLE 테이블명 ADD 데이터타입(10)
+--    EMP_DDL 새로운 컬럼 추가 hp(010-3651-4561)
+ALTER TABLE EMP_DDL ADD HP varchar2(15);
 
 
+-- 2) 열 이름 변경(RENAME)
+--    ALTER TABLE 테이블명 RENAME COLUMN 기존이름 TO 변경이름
+--    HP -> MOBILE
+ALTER TABLE EMP_DDL RENAME COLUMN HP TO MOBILE;
 
 
+-- 3) 열 자료형 변경
+ALTER TABLE EMP_DDL MODIFY EMPNO NUMBER(5);
+
+-- 4) 열 제거
+--    ALTER TABLE 테이블명 DROP COLUMN 열이름
+
+ALTER TABLE EMP_DDL DROP COLUMN MOBILE;
 
 
+-- 테이블 이릅 변경
+-- RENAME 변경전 테이블명 TO 변경할 테이블명
+-- EMP_DDL -> EMP_ALTER
+RENAME EMP_DDL TO EMP_ALTER;
+
+-- CREATE ,ALTER, DROP
+-- 3) 삭제 : DROP
+-- DROP TABLE 테이블명
+DROP TABLE EMP_ALTER;
 
 
+-- VIEW : 가상 테이블 
+-- CREATE VIEW 뷰이름 as (AELECT * FROM 원본 테이블명)
+-- VIEW 를 통해 원본 수정이 가능
+-- 편리성, 보안성
+CREATE VIEW VM_EMP20 as (SELECT * FROM EMP WHERE DEPTNO=20);
+
+SELECT * FROM VM_EMP20;
+
+-- 뷰를 통해 데이터 삽입시 원본에도 영향을 끼침
+INSERT INTO VM_EMP20 
+VALUES(8888,'HONG','ANALYST',7902,SYSDATE,2500,NULL,20);
+
+SELECT * 
+FROM EMP e ;
+
+SELECT *
+FROM USER_UPDATABLE_COLUMNS
+WHERE TABLE_NAME='VM_EMP30';
+
+CREATE VIEW VM_EMP30 AS (SELECT * FROM EMP WHERE DEPTNO=30) WITH READ ONLY;
+
+SELECT *
+FROM USER_UPDATABLE_COLUMNS
+WHERE TABLE_NAME='VM_EMP30';
 
 
+-- VIEW 삭제
+DROP VIEW VM_EMP30 ;
+
+-- INDEX 생성, 삭제
+-- INDEX(색인, 목차)
+-- 인덱스 : 기본키, 고유키일때 자동으로 생성
 
 
+--CREATE INDEX 인덱스명 ON 테이블명(인덱스로 사용할 필드명)
+
+CREATE INDEX idx_emp_sal ON emp(sal);
 
 
+SELECT * FROM USER_IND_COLUMNS;
+
+DROP INDEX idx_emp_sal;
+
+-- 시퀀스 생성/삭제
+-- 오라큻 객체 
+
+--CREATE SEQUENCE 시퀀스명 
+--INCREMENT BY 증감값 START WITH 시작값 MAXVALUE 최대값 MINVALUE 최소겂
+--nocycle cache 숫자;
+
+
+-- 1 에서 시작 ~ 9999999999999999999999999
+-- 1씩 증가하면서 숫자 생성
+CREATE SEQUENCE dept_seq;
+DROP SEQUENCE dept_seq;
+SELECT * FROM USER_SEQUENCES;
+
+
+CREATE TABLE dept_sequence AS SELECT * FROM dept WHERE 1<>1;
+
+CREATE SEQUENCE dept_seq
+INCREMENT BY 10 START WITH 10 MAXVALUE 90 MINVALUE 0
+NOCYCLE cache 2;
+
+-- 시퀀스 DEPT_SEQ.NAXTXAL exceeds MAXVALUE은 사례
+INSERT INTO dept_sequence(DEPTNO,DNAME,LOC)
+VALUES(dept_seq.NEXTVAL, 'DATEBASE', 'SEOUL');
+
+SELECT * FROM dept_sequence;
+
+ALTER SEQUENCE dept_seq INCREMENT BY 3 MAXVALUE 99 CYCLE;
+
+-- 마지막으로 생성된 시퀀스 확인
+SELECT dept_seq.CURRVAL FROM DUAL;
 
 
 
